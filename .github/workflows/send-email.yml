@@ -1,0 +1,181 @@
+name: Daily Email Sender
+
+# 触发条件
+on:
+  # 1. 定时触发（每天 UTC 时间 0:00，即北京时间 8:00）
+  schedule:
+    - cron: '30 16 * * *'  # 格式：分 时 日 月 周
+    
+  # 2. 手动触发（可选）
+  workflow_dispatch:
+    # 可以添加输入参数
+    inputs:
+      custom_message:
+        description: '自定义消息'
+        required: false
+        default: 'Hello World!'
+        
+  # 3. 推送代码时触发（用于测试）
+  push:
+    branches: [ main, master ]
+    
+  # 4. 创建 Pull Request 时触发（可选）
+  pull_request:
+    branches: [ main, master ]
+
+# 全局环境变量
+env:
+  TIMEZONE: "Asia/Shanghai"
+
+# 工作流任务
+jobs:
+  # 任务 1：发送邮件
+  send-email:
+    # 运行环境
+    runs-on: ubuntu-latest
+    
+    # 步骤
+    steps:
+      # 步骤 1：打印开始信息
+      - name: Print start message
+        run: echo "🎯 开始发送每日邮件..."
+        
+      # 步骤 2：检出代码（可选，如果没有文件需要读取）
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      # 步骤 3：安装必要的工具
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl
+          echo "工具安装完成"
+          
+      # 步骤 4：获取当前时间
+      - name: Get current time
+        id: time
+        run: |
+          echo "UTC时间: $(date -u)"
+          echo "北京时间: $(TZ='Asia/Shanghai' date)"
+          echo "time=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+          
+      # 步骤 5：发送邮件（使用 SMTP）
+      - name: Send email via SMTP
+        id: send-email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          # SMTP 服务器配置
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          
+          # 邮箱认证
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          
+          # 邮件内容
+          subject: "📧 每日问候 - ${{ steps.time.outputs.time }}"
+          body: |
+            🌟 Hello World! 🌟
+            
+            这是来自 GitHub Actions 的自动邮件！
+            
+            🕐 发送时间：${{ steps.time.outputs.time }}
+            📂 仓库：${{ github.repository }}
+            🔧 工作流：${{ github.workflow }}
+            
+            祝你今天愉快！🎉
+            
+            ---
+            （这是一封自动发送的邮件，请勿回复）
+            
+          # HTML 格式内容（可选，会覆盖上面的纯文本）
+          html_body: |
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                    .highlight { color: #667eea; font-weight: bold; }
+                    .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; color: #777; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🌟 Hello World! 🌟</h1>
+                    </div>
+                    <div class="content">
+                        <p>这是来自 GitHub Actions 的自动邮件！</p>
+                        
+                        <h3>📋 邮件详情</h3>
+                        <ul>
+                            <li>🕐 发送时间：${{ steps.time.outputs.time }}</li>
+                            <li>📂 仓库：<span class="highlight">${{ github.repository }}</span></li>
+                            <li>🔧 工作流：<span class="highlight">${{ github.workflow }}</span></li>
+                            <li>🎯 触发方式：${{ github.event_name }}</li>
+                        </ul>
+                        
+                        <p>祝你今天愉快！🎉</p>
+                        
+                        <div class="footer">
+                            <p>这是一封自动发送的邮件，请勿回复</p>
+                            <p>发送者：GitHub Actions • ${{ secrets.EMAIL_USER }}</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+          
+          # 发件人信息
+          from: GitHub Actions Bot <${{ secrets.EMAIL_USER }}>
+          
+          # 收件人信息
+          to: ${{ secrets.TO_EMAIL }}
+          
+          # 抄送和密送（可选）
+          # cc: 抄送邮箱1,抄送邮箱2
+          # bcc: 密送邮箱
+          
+          # 安全连接
+          secure: true
+          convert_markdown: false
+          
+          # 附件（可选）
+          # attachments: file1.txt,file2.pdf
+          
+          # 邮件优先级（可选）
+          # priority: high
+          
+      # 步骤 6：发送完成提示
+      - name: Print success message
+        if: steps.send-email.outcome == 'success'
+        run: echo "✅ 邮件发送成功！"
+        
+      # 步骤 7：错误处理（可选）
+      - name: Print failure message
+        if: steps.send-email.outcome == 'failure'
+        run: echo "❌ 邮件发送失败，请检查配置！"
+        
+      # 步骤 8：发送通知到 GitHub（可选）
+      - name: Send notification to GitHub
+        if: always()  # 无论成功失败都执行
+        run: |
+          echo "工作流执行完成"
+          echo "状态: ${{ job.status }}"
+          
+  # 任务 2：记录日志（可选）
+  log-job:
+    needs: send-email  # 依赖 send-email 任务
+    runs-on: ubuntu-latest
+    if: always()  # 无论成功失败都执行
+    
+    steps:
+      - name: Log execution
+        run: |
+          echo "📅 每日邮件任务执行时间: $(date)"
+          echo "📧 邮件任务状态: ${{ needs.send-email.result }}"
+          echo "🔄 工作流 URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
