@@ -4,7 +4,10 @@ name: Daily Email Sender
 on:
   # 1. 定时触发（每天 UTC 时间 0:00，即北京时间 8:00）
   schedule:
-    - cron: '23 08 * * *'  # 格式：分 时 日 月 周
+    - cron: '23 08 * * *'
+    - cron: '20 09 * * *' 
+    - cron: '10 09 * * *' 
+    - cron: '15 09 * * *' 
     
   # 2. 手动触发（可选）
   workflow_dispatch:
@@ -87,48 +90,6 @@ jobs:
             
             ---
             （这是一封自动发送的邮件，请勿回复）
-            
-          # HTML 格式内容（可选，会覆盖上面的纯文本）
-          html_body: |
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <style>
-                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
-                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-                    .highlight { color: #667eea; font-weight: bold; }
-                    .footer { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; color: #777; font-size: 12px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>🌟 Hello World! 🌟</h1>
-                    </div>
-                    <div class="content">
-                        <p>这是来自 GitHub Actions 的自动邮件！</p>
-                        
-                        <h3>📋 邮件详情</h3>
-                        <ul>
-                            <li>🕐 发送时间：${{ steps.time.outputs.time }}</li>
-                            <li>📂 仓库：<span class="highlight">${{ github.repository }}</span></li>
-                            <li>🔧 工作流：<span class="highlight">${{ github.workflow }}</span></li>
-                            <li>🎯 触发方式：${{ github.event_name }}</li>
-                        </ul>
-                        
-                        <p>祝你今天愉快！🎉</p>
-                        
-                        <div class="footer">
-                            <p>这是一封自动发送的邮件，请勿回复</p>
-                            <p>发送者：GitHub Actions • ${{ secrets.EMAIL_USER }}</p>
-                        </div>
-                    </div>
-                </div>
-            </body>
-            </html>
           
           # 发件人信息
           from: GitHub Actions Bot <${{ secrets.EMAIL_USER }}>
